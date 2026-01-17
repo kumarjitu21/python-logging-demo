@@ -8,12 +8,12 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     """Application settings."""
-    
+
     app_name: str = "FastAPI Logging Demo"
     debug: bool = False
     log_level: str = "INFO"
     log_dir: Path = Path("logs")
-    
+
     model_config = {"env_file": ".env"}
 
 
@@ -24,18 +24,19 @@ def setup_logging() -> None:
     """Configure Loguru with both console and file handlers."""
     # Remove default handler
     logger.remove()
-    
+
     # Ensure logs directory exists
     settings.log_dir.mkdir(exist_ok=True)
-    
+
     # Console handler with colored output and correlation ID
     logger.add(
         sys.stdout,
-        format="<level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
+        format="<level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - "
+        "<level>{message}</level>",
         level=settings.log_level,
         colorize=True,
     )
-    
+
     # File handler with rotation - General logs
     logger.add(
         settings.log_dir / "app.log",
@@ -47,7 +48,7 @@ def setup_logging() -> None:
         backtrace=True,
         diagnose=True,
     )
-    
+
     # File handler for errors only
     logger.add(
         settings.log_dir / "errors.log",
@@ -59,9 +60,9 @@ def setup_logging() -> None:
         backtrace=True,
         diagnose=True,
     )
-    
+
     # Structured JSON logs for processing with correlation ID
-    
+
     logger.add(
         settings.log_dir / "structured.json",
         format="{message}",
@@ -71,7 +72,7 @@ def setup_logging() -> None:
         compression="zip",
         serialize=False,
     )
-    
+
     # Add a separate custom JSON handler using json_formatter
     def json_sink(message):
         """Sink for JSON formatted messages."""
@@ -79,11 +80,8 @@ def setup_logging() -> None:
         try:
             correlation_id = record["extra"].get("correlation_id", "N/A")
             # Filter extra dict to exclude correlation_id and request_id
-            extra_fields = {
-                k: v for k, v in record["extra"].items() 
-                if k not in ("correlation_id", "request_id")
-            }
-            
+            extra_fields = {k: v for k, v in record["extra"].items() if k not in ("correlation_id", "request_id")}
+
             log_entry = {
                 "timestamp": record["time"].isoformat(),
                 "level": record["level"].name,
@@ -93,16 +91,16 @@ def setup_logging() -> None:
                 "message": record["message"],
                 "correlation_id": correlation_id,
             }
-            
+
             # Add extra fields if present
             if extra_fields:
                 log_entry["extra"] = extra_fields
-            
+
             with open(settings.log_dir / "structured.json", "a") as f:
                 f.write(json.dumps(log_entry) + "\n")
-        except Exception as e:
+        except Exception:
             pass  # Silently ignore formatting errors
-    
+
     logger.add(
         json_sink,
         level=settings.log_level,

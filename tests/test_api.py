@@ -29,11 +29,7 @@ async def test_health_check():
 async def test_create_user():
     """Test user creation."""
     async with AsyncClient(app=app, base_url="http://test") as client:
-        user_data = {
-            "name": "John Doe",
-            "email": "john@example.com",
-            "age": 30
-        }
+        user_data = {"name": "John Doe", "email": "john@example.com", "age": 30}
         response = await client.post("/api/users", json=user_data)
         assert response.status_code == 200
         data = response.json()
@@ -47,14 +43,10 @@ async def test_get_user():
     """Test get user by ID."""
     async with AsyncClient(app=app, base_url="http://test") as client:
         # Create user first
-        user_data = {
-            "name": "Jane Doe",
-            "email": "jane@example.com",
-            "age": 28
-        }
+        user_data = {"name": "Jane Doe", "email": "jane@example.com", "age": 28}
         create_response = await client.post("/api/users", json=user_data)
         user_id = create_response.json()["id"]
-        
+
         # Get user
         response = await client.get(f"/api/users/{user_id}")
         assert response.status_code == 200
@@ -90,8 +82,10 @@ async def test_correlation_id_propagation():
         response = await client.get("/api/health", headers=headers)
         assert response.status_code == 200
         # Verify correlation ID is in response headers
-        assert response.headers.get("x-correlation-id") == test_correlation_id or \
-               response.headers.get("x-request-id") == test_correlation_id
+        assert (
+            response.headers.get("x-correlation-id") == test_correlation_id
+            or response.headers.get("x-request-id") == test_correlation_id
+        )
 
 
 @pytest.mark.asyncio
@@ -106,9 +100,6 @@ async def test_user_not_found():
 async def test_validation_error():
     """Test invalid user data."""
     async with AsyncClient(app=app, base_url="http://test") as client:
-        invalid_data = {
-            "name": "",  # Empty name
-            "email": "invalid"
-        }
+        invalid_data = {"name": "", "email": "invalid"}  # Empty name
         response = await client.post("/api/users", json=invalid_data)
         assert response.status_code == 422  # Validation error

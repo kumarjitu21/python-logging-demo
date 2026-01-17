@@ -3,10 +3,7 @@ import contextvars
 from typing import Optional
 
 # Context variable to store correlation ID across async contexts
-_correlation_id_var: contextvars.ContextVar[Optional[str]] = contextvars.ContextVar(
-    'correlation_id',
-    default=None
-)
+_correlation_id_var: contextvars.ContextVar[Optional[str]] = contextvars.ContextVar("correlation_id", default=None)
 
 
 def set_correlation_id(correlation_id: str) -> None:
