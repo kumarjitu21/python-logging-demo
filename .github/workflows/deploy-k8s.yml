@@ -1,0 +1,98 @@
+name: Deploy to Kubernetes
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'k8s/**'
+      - '.github/workflows/deploy-k8s.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  deploy:
+    name: Deploy to Kubernetes
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'staging' }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.27.0'
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBECONFIG }}" | base64 -d > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+          kubectl cluster-info
+
+      - name: Set deployment environment
+        id: env
+        run: |
+          ENV=${{ github.event.inputs.environment || 'staging' }}
+          echo "environment=$ENV" >> $GITHUB_OUTPUT
+          echo "Deploying to: $ENV"
+
+      - name: Get Docker image tag
+        id: docker_tag
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          if [[ "$TAG" == "refs/heads/"* ]]; then
+            TAG="${GITHUB_REF#refs/heads/}"
+            TAG="${TAG/\//-}-${{ github.sha }}"
+          fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "Docker tag: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$TAG"
+
+      - name: Update Kubernetes manifests
+        run: |
+          cd k8s
+          for file in fastapi-*.yaml; do
+            sed -i 's|IMAGE_PLACEHOLDER|${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.docker_tag.outputs.tag }}|g' "$file"
+            sed -i 's|ENVIRONMENT_PLACEHOLDER|${{ steps.env.outputs.environment }}|g' "$file"
+          done
+
+      - name: Apply Kubernetes manifests
+        run: |
+          kubectl apply -f k8s/namespace.yaml
+          kubectl apply -f k8s/fastapi-configmap.yaml
+          kubectl apply -f k8s/fastapi-deployment.yaml
+          kubectl apply -f k8s/fastapi-service.yaml
+          kubectl apply -f k8s/fastapi-hpa.yaml
+
+      - name: Wait for rollout
+        run: |
+          kubectl rollout status deployment/fastapi-app -n fastapi --timeout=5m
+
+      - name: Verify deployment
+        run: |
+          kubectl get pods -n fastapi
+          kubectl get services -n fastapi
+          kubectl describe deployment fastapi-app -n fastapi
+
+      - name: Post deployment status
+        if: always()
+        run: |
+          if kubectl get pods -n fastapi | grep -q "fastapi-app.*Running"; then
+            echo "✓ Deployment successful"
+          else
+            echo "✗ Deployment failed"
+            exit 1
+          fi

@@ -1,0 +1,239 @@
+# ==============================================================================
+# Python
+# ==============================================================================
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Distribution / packaging
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Translations
+*.mo
+*.pot
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# PEP 582
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.env.local
+.env.*.local
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# ==============================================================================
+# Poetry
+# ==============================================================================
+poetry.lock
+dist/
+
+# ==============================================================================
+# IDE & Editor
+# ==============================================================================
+.vscode/
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+.vim/
+.emacs.d/
+*.code-workspace
+
+# ==============================================================================
+# Project-specific
+# ==============================================================================
+logs/
+*.log
+*.log.gz
+*.log.zip
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+
+# ==============================================================================
+# OS
+# ==============================================================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ==============================================================================
+# Docker
+# ==============================================================================
+docker-compose.override.yml
+.dockerignore
+
+# ==============================================================================
+# Kubernetes
+# ==============================================================================
+kubeconfig
+.kube/
+*.yaml.bak
+*.yaml.tmp
+
+# ==============================================================================
+# CI/CD
+# ==============================================================================
+.github/workflows/*.log
+.github/workflows/*.tmp
+.github/actions/*/node_modules/
+.github/actions/*/.env
+
+# ==============================================================================
+# Azure
+# ==============================================================================
+.azure/
+azure-pipelines.log
+.azurerc
+
+# ==============================================================================
+# Security
+# ==============================================================================
+*.pem
+*.key
+*.pfx
+*.p12
+secrets.json
+.env.production
+.env.staging
+
+# ==============================================================================
+# Node (if using any Node tools)
+# ==============================================================================
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# ==============================================================================
+# Build artifacts
+# ==============================================================================
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+*.out
+
+# ==============================================================================
+# IDEs - Local history (jetbrains)
+# ==============================================================================
+.idea/*/workspace.xml
+.idea/*/tasks.xml
+.idea/*/usage.statistics.xml
+.idea/*/dictionaries
+.idea_modules/
+
+# ==============================================================================
+# Generated files
+# ==============================================================================
+*.bak
+*.tmp
+*.orig
+.coverage.report
+htmlcov/

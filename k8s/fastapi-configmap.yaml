@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fastapi-config
+  namespace: fastapi-app
+  labels:
+    app: fastapi-app
+data:
+  DEBUG: "False"
+  LOG_LEVEL: "INFO"
+  APP_NAME: "FastAPI Logging Demo"
+  ENVIRONMENT: "production"
