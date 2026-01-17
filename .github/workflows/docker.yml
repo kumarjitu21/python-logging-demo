@@ -61,7 +61,9 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Image digest
-        run: echo "Image digest: ${{ steps.docker_build.outputs.digest }}"
+        run: |
+          echo "Image successfully built and pushed"
+          echo "Digest: ${{ steps.docker_build.outputs.digest }}"
 
   scan:
     name: Scan Docker Image
