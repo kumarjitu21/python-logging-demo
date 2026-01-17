@@ -42,57 +42,106 @@ Configuration is in [app/core/logging.py](app/core/logging.py)
 
 #### 4. Structured JSON Log (structured.json)
 - **Path**: `logs/structured.json`
-- **Format**: Machine-readable JSON
-- **Purpose**: Integration with log aggregation tools
+- **Format**: Machine-readable JSON (JSONL - one JSON object per line)
+- **Purpose**: Integration with log aggregation tools (Fluent Bit, ELK, Datadog, etc.)
+- **Handler**: Custom `json_sink()` function
 - **Rotation**: 100 MB
 
-## Request Tracing
+### JSON Log Format
+
+Each JSON log entry includes:
+- `timestamp`: ISO 8601 formatted timestamp
+- `level`: Log level (INFO, ERROR, DEBUG, etc.)
+- `logger`: Logger name (usually module path)
+- `function`: Function name where log was called
+- `line`: Line number of log call
+- `message`: Log message
+- `correlation_id`: Request correlation ID for tracing
+- `extra`: Additional fields passed to logger.bind()
+
+**Example:**
+```json
+{
+  "timestamp": "2026-01-17T16:18:38.224345+05:30",
+  "level": "INFO",
+  "logger": "app.core.middleware",
+  "function": "dispatch",
+  "line": 36,
+  "message": "Incoming request",
+  "correlation_id": "health-check-001",
+  "extra": {
+    "method": "GET",
+    "path": "/api/health",
+    "query_params": {},
+    "client": "127.0.0.1"
+  }
+}
+```
+
+## Request Tracing & Correlation IDs
 
 ### Unique Request IDs
 
 Every HTTP request gets a unique request ID that:
-1. Is generated in middleware
-2. Is added to request state
-3. Is bound to all logs for that request
-4. Is returned in response headers (`X-Request-ID`)
+1. Is extracted from `X-Correlation-ID` or `X-Request-ID` headers (if provided)
+2. Otherwise, a new UUID is auto-generated
+3. Is stored in request state for endpoint access
+4. Is stored in context variables for nested async operations
+5. Is bound to all logs for that request via logger.bind()
+6. Is returned in response headers for client correlation
 
-### Example Log Entry with Request Context
+### Correlation ID Implementation
+
+The project uses Python's built-in `contextvars` module for async-safe correlation ID management:
 
 ```python
-logger.bind(request_id=request_id).info(
-    "Creating new user",
-    user_name="John Doe",
-    user_email="john@example.com",
-    user_age=30,
-)
+# In app/core/correlation_id.py
+import contextvars
+
+_correlation_id_var = contextvars.ContextVar('correlation_id', default=None)
+
+def set_correlation_id(correlation_id: str) -> None:
+    """Set correlation ID in context."""
+    _correlation_id_var.set(correlation_id)
+
+def get_correlation_id() -> Optional[str]:
+    """Get correlation ID from context."""
+    return _correlation_id_var.get()
 ```
 
-This produces:
-```
-2026-01-17 14:46:09 | INFO | app.api.routes:create_user:60 - Creating new user
-request_id=550e8400-e29b-41d4-a716-446655440000
-user_name=John Doe
-user_email=john@example.com
-user_age=30
+This ensures correlation IDs work correctly with async functions and nested operations.
+
+### Example Log Entry with Correlation ID
+
+```python
+from app.core.correlation_id import get_correlation_id
+from loguru import logger
+
+async def create_user(user: UserCreate, request: Request):
+    correlation_id = get_correlation_id()
+    
+    logger.bind(correlation_id=correlation_id).info(
+        "Creating new user",
+        user_name=user.name,
+        user_email=user.email,
+    )
 ```
 
-And in JSON:
+This produces in JSON:
 ```json
 {
-  "timestamp": "2026-01-17T14:46:09.123456",
+  "timestamp": "2026-01-17T14:46:09.123456+05:30",
   "level": "INFO",
   "logger": "app.api.routes",
   "function": "create_user",
   "line": 60,
   "message": "Creating new user",
+  "correlation_id": "abc123-def456",
   "extra": {
-    "request_id": "550e8400-e29b-41d4-a716-446655440000",
     "user_name": "John Doe",
-    "user_email": "john@example.com",
-    "user_age": 30
+    "user_email": "john@example.com"
   }
 }
-```
 
 ## Usage Examples
 
@@ -422,25 +471,75 @@ async def save_user(user: User):
 
 ## Configuration Reference
 
-Edit `app/core/logging.py` to customize:
+### Log Handlers
 
+The logging configuration is in [app/core/logging.py](app/core/logging.py) with the following handlers:
+
+#### 1. Console Handler
 ```python
-# Console handler
 logger.add(
     sys.stdout,
-    format="<level>{level: <8}</level> | {name}:{function}:{line} - {message}",
+    format="<level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
     level=settings.log_level,
     colorize=True,
 )
+```
+Outputs colored, human-readable logs to console.
 
-# File handler
+#### 2. File Handler (app.log)
+```python
 logger.add(
-    "logs/app.log",
+    settings.log_dir / "app.log",
+    format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}",
+    level=settings.log_level,
     rotation="100 MB",      # Rotate at 100 MB
     retention="10 days",    # Keep for 10 days
     compression="zip",      # Compress rotated files
 )
 ```
+Outputs structured text logs to file.
+
+#### 3. Error Handler (errors.log)
+```python
+logger.add(
+    settings.log_dir / "errors.log",
+    format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}",
+    level="ERROR",
+    rotation="50 MB",
+    retention="30 days",
+    compression="zip",
+)
+```
+Captures only ERROR level logs and above.
+
+#### 4. JSON Handler (structured.json)
+```python
+def json_sink(message):
+    """Custom JSON sink for structured logging."""
+    record = message.record
+    try:
+        correlation_id = record["extra"].get("correlation_id", "N/A")
+        extra_fields = {k: v for k, v in record["extra"].items() 
+                       if k not in ("correlation_id",)}
+        log_entry = {
+            "timestamp": record["time"].isoformat(),
+            "level": record["level"].name,
+            "logger": record["name"],
+            "function": record["function"],
+            "line": record["line"],
+            "message": record["message"],
+            "correlation_id": correlation_id,
+        }
+        if extra_fields:
+            log_entry["extra"] = extra_fields
+        with open(settings.log_dir / "structured.json", "a") as f:
+            f.write(json.dumps(log_entry) + "\n")
+    except Exception as e:
+        pass  # Silently ignore formatting errors
+
+logger.add(json_sink, level=settings.log_level)
+```
+Custom handler that writes JSON-formatted logs in JSONL format (one JSON per line) for log aggregation tools.
 
 ## See Also
 

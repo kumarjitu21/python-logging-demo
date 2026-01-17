@@ -8,7 +8,8 @@ A modern FastAPI application demonstrating industry best practices for structure
 - ✅ **Poetry** - Python dependency management
 - ✅ **Loguru** - Powerful and flexible logging library
 - ✅ **Structured Logging** - JSON-formatted logs for easy parsing and analysis
-- ✅ **Request Tracing** - Unique request IDs for distributed tracing
+- ✅ **Correlation ID** - Industry-standard distributed request tracing using contextvars
+- ✅ **Request Tracing** - Unique request IDs propagated across async operations
 - ✅ **Multiple Log Handlers** - Console, file, error, and structured JSON logs
 - ✅ **Log Rotation** - Automatic log file rotation and compression
 - ✅ **Pydantic Models** - Data validation and serialization
@@ -27,11 +28,12 @@ python-logging-demo/
 ├── app/
 │   ├── api/
 │   │   ├── __init__.py
-│   │   └── routes.py              # API endpoints with logging
+│   │   └── routes.py              # API endpoints with logging and correlation ID
 │   ├── core/
 │   │   ├── __init__.py
 │   │   ├── config.py              # Application configuration
 │   │   ├── logging.py             # Loguru setup and configuration
+│   │   ├── correlation_id.py      # Correlation ID context management (contextvars)
 │   │   └── middleware.py          # Request/response logging middleware
 │   ├── models/
 │   │   ├── __init__.py
@@ -39,7 +41,7 @@ python-logging-demo/
 │   ├── __init__.py
 │   └── main.py                    # FastAPI application entry point
 ├── tests/
-│   └── test_api.py               # API tests with logging
+│   └── test_api.py               # API tests with logging and correlation ID tests
 ├── k8s/                           # Kubernetes manifests
 │   ├── namespace.yaml
 │   ├── fastapi-service.yaml
