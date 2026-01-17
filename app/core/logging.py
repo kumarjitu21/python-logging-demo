@@ -2,9 +2,7 @@
 import sys
 import json
 from pathlib import Path
-from typing import Any
 from loguru import logger
-from pythonjsonlogger import jsonlogger
 from pydantic_settings import BaseSettings
 
 
@@ -22,19 +20,6 @@ class Settings(BaseSettings):
 settings = Settings()
 
 
-class CustomJsonFormatter(jsonlogger.JsonFormatter):
-    """Custom JSON formatter for structured logging."""
-    
-    def add_fields(self, log_record: dict, record: Any, message_dict: dict) -> None:
-        """Add custom fields to log record."""
-        super().add_fields(log_record, record, message_dict)
-        log_record['timestamp'] = record.created
-        log_record['level'] = record.levelname
-        log_record['module'] = record.module
-        log_record['function'] = record.funcName
-        log_record['line'] = record.lineno
-
-
 def setup_logging() -> None:
     """Configure Loguru with both console and file handlers."""
     # Remove default handler
@@ -46,7 +31,7 @@ def setup_logging() -> None:
     # Console handler with colored output and correlation ID
     logger.add(
         sys.stdout,
-        format="<level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> | correlation_id={extra[correlation_id]} - <level>{message}</level>",
+        format="<level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
         level=settings.log_level,
         colorize=True,
     )
@@ -76,26 +61,51 @@ def setup_logging() -> None:
     )
     
     # Structured JSON logs for processing with correlation ID
-    def json_formatter(record):
-        """Format log record as JSON with correlation ID."""
-        return json.dumps({
-            "timestamp": record["time"].isoformat(),
-            "correlation_id": record["extra"].get("correlation_id", "N/A"),
-            "level": record["level"].name,
-            "logger": record["name"],
-            "function": record["function"],
-            "line": record["line"],
-            "message": record["message"],
-            "extra": {k: v for k, v in record["extra"].items() if k != "correlation_id"},
-        })
     
     logger.add(
         settings.log_dir / "structured.json",
-        format=json_formatter,
+        format="{message}",
         level=settings.log_level,
         rotation="100 MB",
         retention="10 days",
         compression="zip",
+        serialize=False,
+    )
+    
+    # Add a separate custom JSON handler using json_formatter
+    def json_sink(message):
+        """Sink for JSON formatted messages."""
+        record = message.record
+        try:
+            correlation_id = record["extra"].get("correlation_id", "N/A")
+            # Filter extra dict to exclude correlation_id and request_id
+            extra_fields = {
+                k: v for k, v in record["extra"].items() 
+                if k not in ("correlation_id", "request_id")
+            }
+            
+            log_entry = {
+                "timestamp": record["time"].isoformat(),
+                "level": record["level"].name,
+                "logger": record["name"],
+                "function": record["function"],
+                "line": record["line"],
+                "message": record["message"],
+                "correlation_id": correlation_id,
+            }
+            
+            # Add extra fields if present
+            if extra_fields:
+                log_entry["extra"] = extra_fields
+            
+            with open(settings.log_dir / "structured.json", "a") as f:
+                f.write(json.dumps(log_entry) + "\n")
+        except Exception as e:
+            pass  # Silently ignore formatting errors
+    
+    logger.add(
+        json_sink,
+        level=settings.log_level,
     )
 
 
