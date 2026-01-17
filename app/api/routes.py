@@ -11,6 +11,11 @@ users_db: dict = {}
 next_user_id = 1
 
 
+def get_correlation_id(request: Request) -> str:
+    """Extract correlation ID from request state."""
+    return getattr(request.state, "correlation_id", "N/A")
+
+
 @router.get(
     "/health",
     response_model=HealthCheckResponse,
@@ -24,9 +29,9 @@ async def health_check(request: Request) -> HealthCheckResponse:
     Returns:
         HealthCheckResponse: Service status and version
     """
-    request_id = getattr(request.state, "request_id", "N/A")
+    correlation_id = get_correlation_id(request)
     
-    logger.bind(request_id=request_id).info(
+    logger.bind(correlation_id=correlation_id).info(
         "Health check performed",
         endpoint="/health",
     )
@@ -54,10 +59,10 @@ async def create_user(user: UserCreate, request: Request) -> UserResponse:
     Returns:
         UserResponse: Created user details
     """
-    request_id = getattr(request.state, "request_id", "N/A")
+    correlation_id = get_correlation_id(request)
     global next_user_id
     
-    logger.bind(request_id=request_id).info(
+    logger.bind(correlation_id=correlation_id).info(
         "Creating new user",
         user_name=user.name,
         user_email=user.email,
@@ -78,7 +83,7 @@ async def create_user(user: UserCreate, request: Request) -> UserResponse:
         
         users_db[user_id] = new_user
         
-        logger.bind(request_id=request_id).info(
+        logger.bind(correlation_id=correlation_id).info(
             "User created successfully",
             user_id=user_id,
             user_name=user.name,
@@ -87,7 +92,7 @@ async def create_user(user: UserCreate, request: Request) -> UserResponse:
         return new_user
         
     except Exception as exc:
-        logger.bind(request_id=request_id).error(
+        logger.bind(correlation_id=correlation_id).error(
             "Error creating user",
             error=str(exc),
             exc_info=True,
@@ -115,15 +120,15 @@ async def get_user(user_id: int, request: Request) -> UserResponse:
     Raises:
         HTTPException: If user not found
     """
-    request_id = getattr(request.state, "request_id", "N/A")
+    correlation_id = get_correlation_id(request)
     
-    logger.bind(request_id=request_id).info(
+    logger.bind(correlation_id=correlation_id).info(
         "Fetching user details",
         user_id=user_id,
     )
     
     if user_id not in users_db:
-        logger.bind(request_id=request_id).warning(
+        logger.bind(correlation_id=correlation_id).warning(
             "User not found",
             user_id=user_id,
         )
@@ -131,7 +136,7 @@ async def get_user(user_id: int, request: Request) -> UserResponse:
     
     user = users_db[user_id]
     
-    logger.bind(request_id=request_id).info(
+    logger.bind(correlation_id=correlation_id).info(
         "User retrieved successfully",
         user_id=user_id,
         user_name=user.name,
@@ -156,9 +161,9 @@ async def list_users(request: Request) -> list[UserResponse]:
     Returns:
         List of all users
     """
-    request_id = getattr(request.state, "request_id", "N/A")
+    correlation_id = get_correlation_id(request)
     
-    logger.bind(request_id=request_id).info(
+    logger.bind(correlation_id=correlation_id).info(
         "Fetching all users",
         total_users=len(users_db),
     )
@@ -187,9 +192,9 @@ async def update_user(user_id: int, user: UserCreate, request: Request) -> UserR
     Raises:
         HTTPException: If user not found
     """
-    request_id = getattr(request.state, "request_id", "N/A")
+    correlation_id = get_correlation_id(request)
     
-    logger.bind(request_id=request_id).info(
+    logger.bind(correlation_id=correlation_id).info(
         "Updating user",
         user_id=user_id,
         new_name=user.name,
@@ -197,7 +202,7 @@ async def update_user(user_id: int, user: UserCreate, request: Request) -> UserR
     )
     
     if user_id not in users_db:
-        logger.bind(request_id=request_id).warning(
+        logger.bind(correlation_id=correlation_id).warning(
             "Cannot update - user not found",
             user_id=user_id,
         )
@@ -213,7 +218,7 @@ async def update_user(user_id: int, user: UserCreate, request: Request) -> UserR
         
         users_db[user_id] = updated_user
         
-        logger.bind(request_id=request_id).info(
+        logger.bind(correlation_id=correlation_id).info(
             "User updated successfully",
             user_id=user_id,
         )
@@ -221,7 +226,7 @@ async def update_user(user_id: int, user: UserCreate, request: Request) -> UserR
         return updated_user
         
     except Exception as exc:
-        logger.bind(request_id=request_id).error(
+        logger.bind(correlation_id=correlation_id).error(
             "Error updating user",
             user_id=user_id,
             error=str(exc),
@@ -249,15 +254,15 @@ async def delete_user(user_id: int, request: Request) -> dict:
     Raises:
         HTTPException: If user not found
     """
-    request_id = getattr(request.state, "request_id", "N/A")
+    correlation_id = get_correlation_id(request)
     
-    logger.bind(request_id=request_id).info(
+    logger.bind(correlation_id=correlation_id).info(
         "Deleting user",
         user_id=user_id,
     )
     
     if user_id not in users_db:
-        logger.bind(request_id=request_id).warning(
+        logger.bind(correlation_id=correlation_id).warning(
             "Cannot delete - user not found",
             user_id=user_id,
         )
@@ -266,7 +271,7 @@ async def delete_user(user_id: int, request: Request) -> dict:
     try:
         del users_db[user_id]
         
-        logger.bind(request_id=request_id).info(
+        logger.bind(correlation_id=correlation_id).info(
             "User deleted successfully",
             user_id=user_id,
         )
@@ -274,7 +279,7 @@ async def delete_user(user_id: int, request: Request) -> dict:
         return {"message": f"User {user_id} deleted successfully"}
         
     except Exception as exc:
-        logger.bind(request_id=request_id).error(
+        logger.bind(correlation_id=correlation_id).error(
             "Error deleting user",
             user_id=user_id,
             error=str(exc),

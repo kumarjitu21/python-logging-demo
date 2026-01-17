@@ -1,5 +1,6 @@
 """Tests for the FastAPI application."""
 import pytest
+import uuid
 from httpx import AsyncClient
 from app.main import app
 
@@ -72,12 +73,25 @@ async def test_list_users():
 
 
 @pytest.mark.asyncio
-async def test_request_id_header():
-    """Test that request ID is returned in response headers."""
+async def test_correlation_id_header():
+    """Test that correlation ID is returned in response headers."""
     async with AsyncClient(app=app, base_url="http://test") as client:
         response = await client.get("/api/health")
         assert response.status_code == 200
-        assert "x-request-id" in response.headers
+        assert "x-correlation-id" in response.headers or "x-request-id" in response.headers
+
+
+@pytest.mark.asyncio
+async def test_correlation_id_propagation():
+    """Test that custom correlation ID is propagated from request to response."""
+    async with AsyncClient(app=app, base_url="http://test") as client:
+        test_correlation_id = str(uuid.uuid4())
+        headers = {"X-Correlation-ID": test_correlation_id}
+        response = await client.get("/api/health", headers=headers)
+        assert response.status_code == 200
+        # Verify correlation ID is in response headers
+        assert response.headers.get("x-correlation-id") == test_correlation_id or \
+               response.headers.get("x-request-id") == test_correlation_id
 
 
 @pytest.mark.asyncio

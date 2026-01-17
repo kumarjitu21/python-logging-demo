@@ -1,4 +1,4 @@
-"""Logging configuration using Loguru and structlog."""
+"""Logging configuration using Loguru and structlog with correlation ID."""
 import sys
 import json
 from pathlib import Path
@@ -43,10 +43,10 @@ def setup_logging() -> None:
     # Ensure logs directory exists
     settings.log_dir.mkdir(exist_ok=True)
     
-    # Console handler with colored output
+    # Console handler with colored output and correlation ID
     logger.add(
         sys.stdout,
-        format="<level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
+        format="<level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> | correlation_id={extra[correlation_id]} - <level>{message}</level>",
         level=settings.log_level,
         colorize=True,
     )
@@ -75,17 +75,18 @@ def setup_logging() -> None:
         diagnose=True,
     )
     
-    # Structured JSON logs for processing
+    # Structured JSON logs for processing with correlation ID
     def json_formatter(record):
-        """Format log record as JSON."""
+        """Format log record as JSON with correlation ID."""
         return json.dumps({
             "timestamp": record["time"].isoformat(),
+            "correlation_id": record["extra"].get("correlation_id", "N/A"),
             "level": record["level"].name,
             "logger": record["name"],
             "function": record["function"],
             "line": record["line"],
             "message": record["message"],
-            "extra": record["extra"],
+            "extra": {k: v for k, v in record["extra"].items() if k != "correlation_id"},
         })
     
     logger.add(
