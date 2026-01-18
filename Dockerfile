@@ -12,8 +12,9 @@ RUN pip install --no-cache-dir poetry
 
 COPY pyproject.toml poetry.lock* ./
 COPY app/ ./app/
+
+# Create logs directory for runtime log files
 RUN mkdir -p logs
-COPY logs/ ./logs/
 
 # Install dependencies
 RUN poetry config virtualenvs.in-project true && \
