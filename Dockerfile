@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y \
 RUN pip install --no-cache-dir poetry
 
 COPY pyproject.toml poetry.lock* ./
+COPY README.md ./
 COPY app/ ./app/
 
 # Create logs directory for runtime log files
