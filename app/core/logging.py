@@ -20,6 +20,12 @@ class Settings(BaseSettings):
 settings = Settings()
 
 
+def patcher(record):
+    """Add default correlation_id to record if not present."""
+    if "correlation_id" not in record["extra"]:
+        record["extra"]["correlation_id"] = "N/A"
+
+
 def setup_logging() -> None:
     """Configure Loguru with both console and file handlers."""
     # Remove default handler
@@ -35,6 +41,7 @@ def setup_logging() -> None:
         "<level>{message}</level>",
         level=settings.log_level,
         colorize=True,
+        filter=patcher,
     )
 
     # File handler with rotation - General logs
@@ -47,6 +54,7 @@ def setup_logging() -> None:
         compression="zip",
         backtrace=True,
         diagnose=True,
+        filter=patcher,
     )
 
     # File handler for errors only
@@ -59,6 +67,7 @@ def setup_logging() -> None:
         compression="zip",
         backtrace=True,
         diagnose=True,
+        filter=patcher,
     )
 
     # Structured JSON logs for processing with correlation ID
