@@ -31,7 +31,7 @@ def setup_logging() -> None:
     # Console handler with colored output and correlation ID
     logger.add(
         sys.stdout,
-        format="<level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - "
+        format="<level>{level: <8}</level> | <green>{extra[correlation_id]}</green> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - "
         "<level>{message}</level>",
         level=settings.log_level,
         colorize=True,
@@ -40,7 +40,7 @@ def setup_logging() -> None:
     # File handler with rotation - General logs
     logger.add(
         settings.log_dir / "app.log",
-        format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}",
+        format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {extra[correlation_id]} | {name}:{function}:{line} - {message}",
         level=settings.log_level,
         rotation="100 MB",
         retention="10 days",
@@ -52,7 +52,7 @@ def setup_logging() -> None:
     # File handler for errors only
     logger.add(
         settings.log_dir / "errors.log",
-        format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}",
+        format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {extra[correlation_id]} | {name}:{function}:{line} - {message}",
         level="ERROR",
         rotation="50 MB",
         retention="30 days",
