@@ -14,7 +14,7 @@ COPY pyproject.toml poetry.lock* ./
 COPY README.md ./
 COPY app/ ./app/
 
-# Create logs directory for runtime log files
+# Create logs directory for runtime log files and other config changes
 RUN mkdir -p logs
 
 # Install dependencies
